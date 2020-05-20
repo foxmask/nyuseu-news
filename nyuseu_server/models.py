@@ -25,8 +25,8 @@ class Folders(orm.Model):
     date_modified = orm.DateTime(default=datetime.datetime.now)
 
 
-class SourceFeeds(orm.Model):
-    __tablename__ = "source_feeds"
+class Feeds(orm.Model):
+    __tablename__ = "feeds"
     __database__ = database
     __metadata__ = metadata
 
@@ -46,7 +46,7 @@ class Articles(orm.Model):
     __metadata__ = metadata
 
     id = orm.Integer(primary_key=True)
-    source_feeds = orm.ForeignKey(SourceFeeds)
+    feeds = orm.ForeignKey(Feeds)
     title = orm.String(max_length=255)
     text = orm.Text()
     date_created = orm.DateTime(default=datetime.datetime.now)

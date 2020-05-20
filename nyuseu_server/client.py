@@ -49,7 +49,7 @@ async def create():
                     data4 = res4.json()
                     print("create article ", data4)
                     url = 'http://127.0.0.1:8001/nyuseu/articles/'
-                    payload = json.dumps({'title': 'test', 'text': 'super test', 'source_feeds_id': data4['id']})
+                    payload = json.dumps({'title': 'test', 'text': 'super test', 'feeds_id': data4['id']})
                     print("payload pour article", payload)
                     res5 = httpx.post(url, data=payload)
                     print(res5.status_code)

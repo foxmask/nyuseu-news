@@ -21,7 +21,7 @@ PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 PARENT_FOLDER = os.path.dirname(PROJECT_DIR)
 sys.path.append(PARENT_FOLDER)
 
-from nyuseu_server.models import SourceFeeds, Articles
+from nyuseu_server.models import Feeds, Articles
 from nyuseu_server.rss import Rss
 
 config = Config('.env')
@@ -94,7 +94,7 @@ async def go():
 
     """
     logger.info('Nyuseu Server Engine - 뉴스 - Feeds Reader Server - in progress')
-    feeds = await SourceFeeds.objects.all()
+    feeds = await Feeds.objects.all()
     for my_feeds in feeds:
         rss = Rss()
         feeds = await rss.get_data(**{'url_to_parse': my_feeds.url, 'bypass_bozo': config('BYPASS_BOZO')})
@@ -112,13 +112,13 @@ async def go():
             # last triggered execution
             if published is not None and now >= published >= date_grabbed:
                 content = set_content(entry)
-                res = await Articles.objects.create(title=entry.title, text=content, source_feeds=my_feeds)
+                res = await Articles.objects.create(title=entry.title, text=content, feeds=my_feeds)
                 if res:
                     created_entries += 1
                     now = arrow.utcnow().to(config('TIME_ZONE')).format('YYYY-MM-DD HH:mm:ssZZ')
-                    source_feeds = await SourceFeeds.objects.get(id=my_feeds.id)
+                    source_feeds = await Feeds.objects.get(id=my_feeds.id)
                     await source_feeds.update(date_grabbed=now)
-                    logger.info(f'SourceFeeds {my_feeds.title} : {entry.title}')
+                    logger.info(f'Feeds {my_feeds.title} : {entry.title}')
 
         if read_entries:
             logger.info(f'{my_feeds.title}: Entries created {created_entries} / Read {read_entries}')

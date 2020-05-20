@@ -4,7 +4,7 @@
 
 Python 3.7+
 
-##  :wrench: Settings
+## :wrench: Settings
 copy the sample config file 
 ```
 cp env.sample .env

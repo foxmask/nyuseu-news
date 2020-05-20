@@ -10,7 +10,7 @@ PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 PARENT_FOLDER = os.path.dirname(PROJECT_DIR)
 sys.path.append(PARENT_FOLDER)
 
-from nyuseu_server.models import SourceFeeds, Folders
+from nyuseu_server.models import Feeds, Folders
 
 __author__ = 'FoxMaSk'
 __all__ = ['load']
@@ -33,11 +33,9 @@ async def load(opml_resource):
 
                 # create the target SourceFeeds source if not exists
                 try:
-                    res = await SourceFeeds.objects.get(title=feed.text)
+                    res = await Feeds.objects.get(title=feed.text)
                 except orm.exceptions.NoMatch as e:
-                    res = await SourceFeeds.objects.create(title=feed.text,
-                                                           url=feed.xmlUrl,
-                                                           folder=f)
+                    res = await Feeds.objects.create(title=feed.text, url=feed.xmlUrl, folder=f)
         print('Nyuseu Server - 뉴스 - Feeds Loaded')
         return json.dumps({'status': "opml file loaded"})
     else:

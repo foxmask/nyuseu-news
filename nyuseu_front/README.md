@@ -1,4 +1,4 @@
-# Nyuseu Back
+# Nyuseu Front
 
 ## Prerequisites
 
@@ -16,20 +16,22 @@ cp env.sample .env
 and set the following values
 ```ini
 # running in debug mode or not ?
-NYUSEU_DEBUG = False
+NYUSEU_FRONT_DEBUG = False
 # number of feeds to get for each page
 NYUSEU_PAGINATOR = 20
 # host
-NYUSEU_HOST = 127.0.0.1
+NYUSEU_FRONT_HOST = 127.0.0.1
 # listen port number
-NYUSEU_PORT = 8001
+NYUSEU_FRONT_PORT = 8003
 # BASE URL
-NYUSEU_BASE_URL = '/'
+NYUSEU_FRONT_BASE_URL = '/'
+NYEUSEU_HOST=http://127.0.0.1/
+NYEUSEU_PORT=8002
 ```
 
-## :mega: Running the BackEnd
+## :mega: Running the FrontEnd
 
 ```commandline
-python back.py 
-Nyuseu Back - 뉴스 - Feeds Reader - Starlette powered
+python front.py 
+Nyuseu Front - 뉴스 - Feeds Reader - Starlette powered
 ```

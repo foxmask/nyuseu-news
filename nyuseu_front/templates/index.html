@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="col-xs-4 col-md-4 col-lg-4">
+    <ul>
+    {% for line in folders %}
+    <li>{{ line.title }}</li>
+        <ul>
+        {% for feed in folders_and_feeds %}
+            {% if feed['folder']['id'] == line.id %}
+            <li><a href="{{ url_for('get_arts_by_feed', feeds_id=feed.id) }}">{{ feed.title }}</a></li>
+            {% endif %}
+        {% endfor %}
+        </ul>
+    {% endfor %}
+    </ul>
+</div>
+<div class="col-xs-8 col-md-8 col-lg-8">
+    <ul>
+    {% for article in articles %}
+        <li>{{ article.title }}</li>
+    {% endfor %}
+    </ul>
+</div>
+{% endblock %}

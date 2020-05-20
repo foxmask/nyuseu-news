@@ -17,7 +17,7 @@ import sys
 import uvicorn
 import yaml
 
-logging.config.fileConfig('logging.conf')
+# logging.config.fileConfig('logging.conf')
 logger = logging.getLogger(__name__)
 
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -25,7 +25,7 @@ PARENT_FOLDER = os.path.dirname(PROJECT_DIR)
 sys.path.append(PARENT_FOLDER)
 
 import nyuseu_server
-from nyuseu_server.models import SourceFeeds, Folders, Articles
+from nyuseu_server.models import Feeds, Folders, Articles
 from nyuseu_server.opml_load import load
 
 # load configuration
@@ -49,18 +49,34 @@ async def get_art(request):
           [{"id": 1}, {"title": "Github Rss Feeds"}, {"url": "https://github.com/rss"}, {"folder": 1}, {"date_created": "2020-05-12T01:00"}, {"date_modified": "2020-05-12T18:27"},  {"status": True}]
     """
     art_id = request.path_params['art_id']
-    art = await Articles.objects.select_related("source_feeds").get(id=art_id)
+    art = await Articles.objects.select_related("feeds").get(id=art_id)
+
+    folder = await Folders.objects.get(id=art.feeds.folder.id)
+    my_folder = {'id': folder.id,
+                 'title': folder.title,
+                 'date_created': str(folder.date_created),
+                 'date_modified': str(folder.date_modified)
+                 }
+
     payload = {'id': art.id,
                'title': art.title,
                'text': art.text,
-               'source_feeds': art.source_feeds.id,
+               "feeds": {'id': art.feeds.id,
+                         'title': art.feeds.title,
+                         'url': art.feeds.url,
+                         "folder": my_folder,
+                         'date_created': str(art.feeds.date_created),
+                         'date_modified': str(art.feeds.date_modified),
+                         'date_grabbed': str(art.feeds.date_grabbed),
+                         'status': art.feeds.status,
+                         },
                'date_created': str(art.date_created),
                'read': art.read}
     logger.debug(f"get an article {payload}")
     return JSONResponse(payload)
 
 
-async def get_all_arts(request):
+async def get_arts(request):
     """
     responses:
       200:
@@ -70,19 +86,80 @@ async def get_all_arts(request):
           {"source_feeds": 1}, {"date_created": "2020-05-12T01:00"},
           {"date_modified": "2020-05-12T18:27:2"}, {"read": True}]
     """
-    data = await Articles.objects.select_related("source_feeds").all()
-    content = [
-        {
-            "id": result["id"],
-            "title": result["title"],
-            "text": result["text"],
-            "source_feeds": result.source_feeds['id'],
-            "date_created": str(result["date_created"]),
-            "read": result["read"],
-        }
-        for result in data
-    ]
+    content = []
+    data = await Articles.objects.select_related("feeds").all()
+
+    for result in data:
+        folder = await Folders.objects.get(id=result.feeds.folder.id)
+
+        my_folder = {'id': folder.id,
+                     'title': folder.title,
+                     'date_created': str(folder.date_created),
+                     'date_modified': str(folder.date_modified)
+                     }
+        content.append(
+            {
+                "id": result["id"],
+                "title": result["title"],
+                "text": result["text"],
+                "feeds": {'id': result.feeds.id,
+                          'title': result.feeds.title,
+                          'url': result.feeds.url,
+                          "folder": my_folder,
+                          'date_created': str(result.feeds.date_created),
+                          'date_modified': str(result.feeds.date_modified),
+                          'date_grabbed': str(result.feeds.date_grabbed),
+                          'status': result.feeds.status,
+                          },
+                "date_created": str(result["date_created"]),
+                "read": result["read"],
+            }
+        )
     logger.debug("get all articles")
+    return JSONResponse(content)
+
+
+async def get_arts_by_feed(request):
+    """
+    responses:
+      200:
+        description: get the list of articles for a given feeds
+        examples:
+          [{"id": 1}, {"title": "My amazing source feeds"}, {"text": "Foo and Bar"},
+          {"feeds": 1}, {"date_created": "2020-05-12T01:00"},
+          {"date_modified": "2020-05-12T18:27:2"}, {"read": True}]
+    """
+    feeds_id = request.path_params['feeds_id']
+    content = []
+    data = await Articles.objects.filter(feeds__id=feeds_id).all()
+
+    for result in data:
+        folder = await Folders.objects.get(id=result.feeds.folder.id)
+
+        my_folder = {'id': folder.id,
+                     'title': folder.title,
+                     'date_created': str(folder.date_created),
+                     'date_modified': str(folder.date_modified)
+                     }
+        content.append(
+            {
+                "id": result["id"],
+                "title": result["title"],
+                "text": result["text"],
+                "feeds": {'id': result.feeds.id,
+                          'title': result.feeds.title,
+                          'url': result.feeds.url,
+                          "folder": my_folder,
+                          'date_created': str(result.feeds.date_created),
+                          'date_modified': str(result.feeds.date_modified),
+                          'date_grabbed': str(result.feeds.date_grabbed),
+                          'status': result.feeds.status,
+                          },
+                "date_created": str(result["date_created"]),
+                "read": result["read"],
+            }
+        )
+    logger.debug(f"get all articles for that feed {feeds_id}")
     return JSONResponse(content)
 
 
@@ -92,25 +169,39 @@ async def create_art(request):
       200:
         description: create an article.
         examples:
-          [{"title": "My nice article"}, {"text": "Foo and Bar twice"}, {"source_feeds": 1}]
+          [{"title": "My nice article"}, {"text": "Foo and Bar twice"}, {"feeds": 1}]
     """
     payload = await request.json()
     title = payload['title']
     text = payload['text']
-    if 'source_feeds_id' not in payload:
-        raise ValueError('SourceFeeds is missing. An Article belongs to a Source Feeds')
-    source_feeds_id = payload['source_feeds_id']
+    if 'feeds_id' not in payload:
+        raise ValueError('Feeds is missing. An Article belongs to a Feeds')
+    feeds_id = payload['feeds_id']
     try:
-        source_feeds = await SourceFeeds.objects.get(id=source_feeds_id)
+        feeds = await Feeds.objects.get(id=feeds_id)
+        folder = await Folders.objects.get(id=feeds.folder.id)
+
+        my_folder = {'id': folder.id,
+                     'title': folder.title,
+                     'date_created': str(folder.date_created),
+                     'date_modified': str(folder.date_modified)
+                     }
+        my_feed = {'id': feeds.id,
+                   'title': feeds.title,
+                   'url': feeds.url,
+                   'folder': my_folder,
+                   'date_created': str(feeds.date_created),
+                   'date_modified': str(feeds.date_modified),
+                   'date_grabbed': str(feeds.date_grabbed),
+                   'status': feeds.status,
+                   }
         try:
-            res = await Articles.objects.create(title=title,
-                                                text=text,
-                                                source_feeds=source_feeds)
+            res = await Articles.objects.create(title=title, text=text, feeds=my_feed)
             if res:
                 logger.debug(f"create article {res.id}:{res.title}")
                 return JSONResponse(json.dumps({'id': res.id,
                                                 'title': res.title,
-                                                'source_feeds': res.source_feeds.id,
+                                                'feeds': my_feed,
                                                 'text': res.text,
                                                 'date_created': str(res.date_created),
                                                 'read': res.read}))
@@ -119,7 +210,7 @@ async def create_art(request):
         except ValueError as e:
             raise ValueError(e)
     except orm.exceptions.NoMatch as e:
-        raise ValueError(f"SourceFeeds {source_feeds_id} not found, no article created - {e}")
+        raise ValueError(f"Feeds {feeds_id} not found, no article created - {e}")
 
 
 async def update_art(request):
@@ -133,18 +224,18 @@ async def update_art(request):
     art_id = request.path_params['art_id']
     payload = await request.json()
     title = payload['title']
-    source_feeds_id = payload['source_feeds_id']
+    feeds_id = payload['feeds_id']
     read = payload['read']
     text = payload['text']
     try:
-        source_feeds = await SourceFeeds.objects.get(id=art_id)
+        feeds = await Feeds.objects.get(id=art_id)
     except orm.exceptions.NoMatch as e:
-        raise ValueError(f"SourceFeeds {source_feeds_id} not found - {e}")
+        raise ValueError(f"Feeds {feeds_id} not found - {e}")
 
     art = await Articles.objects.get(id=art_id)
-    if source_feeds:
+    if feeds:
         res = await art.update(title=title,
-                               source_feeds=source_feeds,
+                               feeds=feeds,
                                text=text,
                                read=True if read else False)
     else:   # folder has not been found, update the source_feeds without the folder
@@ -174,7 +265,7 @@ async def delete_art(request):
 
 
 # SOURCE FEEDS
-async def get_source_feeds(request):
+async def get_feed(request):
     """
     responses:
       200:
@@ -182,20 +273,25 @@ async def get_source_feeds(request):
         examples:
           [{"id": 1}, {"title": "Github Rss Feeds"}, {"url": "https://github.com/rss"}, {"folder": 1}, {"date_created": "2020-05-12T01:00"}, {"date_modified": "2020-05-12T18:27"},  {"status": True}]
     """
-    source_feeds_id = request.path_params['source_feeds_id']
-    source_feeds = await SourceFeeds.objects.select_related("folder").get(id=source_feeds_id)
-    payload = {'id': source_feeds.id,
-               'title': source_feeds.title,
-               'url': source_feeds.url,
-               'folder': source_feeds.folder.id,
-               'date_created': str(source_feeds.date_created),
-               'date_modified': str(source_feeds.date_modified),
-               'status': source_feeds.status}
+    feeds_id = request.path_params['feeds_id']
+    feeds = await Feeds.objects.select_related("folder").get(id=feeds_id)
+
+    payload = {'id': feeds.id,
+               'title': feeds.title,
+               'url': feeds.url,
+               "folder": {'id': feeds.folder.id,
+                          'title': feeds.folder.title,
+                          'date_created': str(feeds.folder.date_created),
+                          'date_modified': str(feeds.folder.date_modified)
+                          },
+               'date_created': str(feeds.date_created),
+               'date_modified': str(feeds.date_modified),
+               'status': feeds.status}
     logger.debug(f"get a source feeds {payload}")
     return JSONResponse(payload)
 
 
-async def get_all_source_feeds(request):
+async def get_feeds(request):
     """
     responses:
       200:
@@ -204,13 +300,17 @@ async def get_all_source_feeds(request):
           [{"id": 1}, {"title": "Github Rss Feeds"}, {"url": "https://github.com/rss"}, {"folder": 1},
           {"date_created": "2020-05-12T01:00"}, {"date_modified": "2020-05-12T18:27:2"}, {"status": True}]
     """
-    data = await SourceFeeds.objects.select_related("folder").all()
+    data = await Feeds.objects.select_related("folder").all()
     content = [
         {
             "id": result["id"],
             "title": result["title"],
             "url": result["url"],
-            "folder": result.folder['id'],
+            "folder": {'id': result.folder.id,
+                       'title': result.folder.title,
+                       'date_created': str(result.folder.date_created),
+                       'date_modified': str(result.folder.date_modified)
+                       },
             "date_created": str(result["date_created"]),
             "date_modified": str(result["date_modified"]),
             "status": result["status"],
@@ -221,7 +321,7 @@ async def get_all_source_feeds(request):
     return JSONResponse(content)
 
 
-async def create_source_feeds(request):
+async def create_feeds(request):
     """
     responses:
       200:
@@ -238,12 +338,10 @@ async def create_source_feeds(request):
     try:
         folder = await Folders.objects.get(id=folder_id)
         try:
-            res = await SourceFeeds.objects.get(title=title)
+            res = await Feeds.objects.get(title=title)
 
         except orm.exceptions.NoMatch as e:
-            res = await SourceFeeds.objects.create(title=title,
-                                                   url=url,
-                                                   folder=folder)
+            res = await Feeds.objects.create(title=title, url=url, folder=folder)
         if res:
             logger.debug(f"create a source feeds {res.id}:{res.title} {res.url}")
             return JSONResponse(json.dumps({'id': res.id,
@@ -260,7 +358,7 @@ async def create_source_feeds(request):
         raise ValueError(f"Folder {folder_id} not found, no source feeds created - {e}")
 
 
-async def update_source_feeds(request):
+async def update_feeds(request):
     """
     responses:
       200:
@@ -269,7 +367,7 @@ async def update_source_feeds(request):
           [{"id": 1}, {"title": "Github Rss Feeds"}, {"url": "https://github.com/rss"}, {"folder": 1},
           {"status": True}]
     """
-    source_feeds_id = request.path_params['source_feedsid']
+    feeds_id = request.path_params['feeds_id']
     payload = await request.json()
     title = payload['title']
     folder_id = payload['folder_id']
@@ -280,21 +378,21 @@ async def update_source_feeds(request):
     except orm.exceptions.NoMatch as e:
         raise ValueError(f"Folder {folder_id} not found - {e}")
 
-    source_feeds = await SourceFeeds.objects.get(id=source_feeds_id)
+    feeds_id = await Feeds.objects.get(id=feeds_id)
     if folder:
-        res = await SourceFeeds.update(title=title,
-                                       folder=folder,
-                                       url=url,
-                                       status=True if status else False)
+        res = await Feeds.update(title=title,
+                                 folder=folder,
+                                 url=url,
+                                 status=True if status else False)
     else:   # folder has not been found, update the source_feeds without the folder
-        res = await SourceFeeds.update(title=title,
-                                       url=url,
-                                       status=True if status else False)
-    logger.debug(f"update a source feeds {source_feeds_id}:{title}")
+        res = await Feeds.update(title=title,
+                                 url=url,
+                                 status=True if status else False)
+    logger.debug(f"update a source feeds {feeds_id}:{title}")
     return JSONResponse(res.json())
 
 
-async def delete_source_feeds(request):
+async def delete_feeds(request):
     """
     responses:
       200:
@@ -302,18 +400,18 @@ async def delete_source_feeds(request):
         examples:
           [{"id": 1}]
     """
-    source_feeds_id = request.path_params['source_feeds_id']
+    feeds_id = request.path_params['feeds_id']
     try:
-        source_feeds = await SourceFeeds.objects.get(id=source_feeds_id)
-        res = await source_feeds.delete(id=source_feeds_id)
+        source_feeds = await Feeds.objects.get(id=feeds_id)
+        res = await source_feeds.delete(id=feeds_id)
     except orm.exceptions.NoMatch as e:
-        raise ValueError(f"Source Feeds {source_feeds_id} not found - {e}")
-    logger.debug(f"delete a Source Feeds {source_feeds_id}")
+        raise ValueError(f"Source Feeds {feeds_id} not found - {e}")
+    logger.debug(f"delete a Source Feeds {feeds_id}")
     return JSONResponse(res.json())
 
 
 # FOLDERS
-async def get_folders(request):
+async def get_folder(request):
     """
     responses:
       200:
@@ -323,7 +421,8 @@ async def get_folders(request):
     """
     folder_id = request.path_params['folder_id']
     folder = await Folders.objects.get(id=folder_id)
-    payload = {'id': folder.id, 'title': folder.title,
+    payload = {'id': folder.id,
+               'title': folder.title,
                'date_created': str(folder.date_created),
                'date_modified': str(folder.date_modified),
                }
@@ -331,7 +430,39 @@ async def get_folders(request):
     return JSONResponse(payload)
 
 
-async def get_all_folders(request):
+async def get_feeds_by_folder(request):
+    """
+    responses:
+      200:
+        description: get the feeds of a given folder.
+        examples:
+          [{"id": 1}]
+    """
+    folder_id = request.path_params['folder_id']
+
+    data = await Feeds.objects.filter(folder__id=folder_id).all()
+    content = [
+        {
+            "id": result["id"],
+            "title": result["title"],
+            "url": result["url"],
+            "folder": {'id': result.folder.id,
+                       'title': result.folder.title,
+                       'date_created': str(result.folder.date_created),
+                       'date_modified': str(result.folder.date_modified)
+                       },
+            "date_created": str(result["date_created"]),
+            "date_modified": str(result["date_modified"]),
+            "status": result["status"],
+        }
+        for result in data
+    ]
+
+    logger.debug(f"get feeds of the folder {folder_id}")
+    return JSONResponse(content)
+
+
+async def get_folders(request):
     """
     responses:
       200:
@@ -452,23 +583,25 @@ def openapi_schema(request):
 # The API Routes
 app = Router(routes=[
     Mount('/nyuseu', app=Router([
-        Mount('/source_feeds', app=Router([
-            Route('/', endpoint=get_all_source_feeds, methods=['GET']),
-            Route('/{source_feeds_id}', endpoint=get_source_feeds, methods=['GET']),
-            Route('/', endpoint=create_source_feeds, methods=['POST']),
-            Route('/{source_feeds_id}', endpoint=update_source_feeds, methods=['PATCH']),
-            Route('/{source_feeds_id}', endpoint=delete_source_feeds, methods=['DELETE']),
+        Mount('/feeds', app=Router([
+            Route('/', endpoint=get_feeds, methods=['GET']),
+            Route('/{feeds_id}', endpoint=get_feed, methods=['GET']),
+            Route('/{feeds_id}/articles', endpoint=get_arts_by_feed, methods=['GET']),
+            Route('/', endpoint=create_feeds, methods=['POST']),
+            Route('/{feeds_id}', endpoint=update_feeds, methods=['PATCH']),
+            Route('/{feeds_id}', endpoint=delete_feeds, methods=['DELETE']),
         ])),
         Mount('/articles', app=Router([
-            Route('/', endpoint=get_all_arts, methods=['GET']),
+            Route('/', endpoint=get_arts, methods=['GET']),
             Route('/{art_id}', endpoint=get_art, methods=['GET']),
             Route('/', endpoint=create_art, methods=['POST']),
             Route('/{art_id}', endpoint=update_art, methods=['PATCH']),
             Route('/{art_id}', endpoint=delete_art, methods=['DELETE']),
         ])),
         Mount('/folders', app=Router([
-            Route('/', endpoint=get_all_folders, methods=['GET']),
-            Route('/{folder_id}', endpoint=get_folders, methods=['GET']),
+            Route('/', endpoint=get_folders, methods=['GET']),
+            Route('/{folder_id}/feeds/', endpoint=get_feeds_by_folder, methods=['GET']),
+            Route('/{folder_id}', endpoint=get_folder, methods=['GET']),
             Route('/', endpoint=create_folder, methods=['POST']),
             Route('/{folder_id}', endpoint=update_folder, methods=['PATCH']),
             Route('/{folder_id}', endpoint=delete_folder, methods=['DELETE']),
