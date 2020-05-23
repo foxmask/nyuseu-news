@@ -1,7 +1,8 @@
 arrow
 feedparser
 jinja2
+httpx
 opml
-pyyalm
+pyyaml
 starlette
 uvicorn

@@ -17,7 +17,6 @@ import sys
 # uvicorn
 import uvicorn
 
-from pprint import pprint
 templates = Jinja2Templates(directory="templates")
 
 # logging.config.fileConfig('logging.conf')
@@ -49,7 +48,6 @@ async def get_feeds_by_folders():
         feeds = httpx.get(f'{NYUSEU_HOST}:{NYUSEU_PORT}/api/nyuseu/folders/{folder_id}/feeds/')
         if feeds.status_code == 200:
             folders_and_feeds += feeds.json()
-    pprint(folders_and_feeds)
     if folders.status_code == 200:
         return folders.json(), folders_and_feeds
     else:
@@ -91,6 +89,46 @@ async def get_arts_by_feed(request):
     return templates.TemplateResponse(template, context)
 
 
+async def arts_mark_as_read(request):
+    pass
+
+
+async def arts_mark_as_unread(request):
+    pass
+
+
+async def art_mark_as_read(request):
+    pass
+
+
+async def art_mark_as_unread(request):
+    pass
+
+
+async def create_feeds(request):
+    pass
+
+
+async def update_feeds(request):
+    pass
+
+
+async def delete_feeds(request):
+    pass
+
+
+async def create_folder(request):
+    pass
+
+
+async def update_folder(request):
+    pass
+
+
+async def delete_folder(request):
+    pass
+
+
 NYUSEU_FRONT_BASE_URL = settings('NYUSEU_FRONT_BASE_URL')
 
 # The Routes to static content and main page
@@ -98,27 +136,24 @@ frontend = Router(routes=[
     Mount('/', app=Router([
         Route('/', endpoint=home, methods=['GET']),
         Mount('/feeds', app=Router([
-            #Route('/', endpoint=get_feeds, methods=['GET']),
-            #Route('/{feeds_id}', endpoint=get_feed, methods=['GET']),
             Route('/{feeds_id}/articles', endpoint=get_arts_by_feed, methods=['GET']),
-            # Route('/', endpoint=create_feeds, methods=['POST']),
-            # Route('/{feeds_id}', endpoint=update_feeds, methods=['PATCH']),
-            # Route('/{feeds_id}', endpoint=delete_feeds, methods=['DELETE']),
+            Route('/{feeds_id}/articles/markread', endpoint=arts_mark_as_read, methods=['PATCH']),
+            Route('/{feeds_id}/articles/markunread', endpoint=arts_mark_as_unread, methods=['PATCH']),
+            Route('/', endpoint=create_feeds, methods=['POST']),
+            Route('/{feeds_id}', endpoint=update_feeds, methods=['PATCH']),
+            Route('/{feeds_id}', endpoint=delete_feeds, methods=['DELETE']),
         ])),
         Mount('/articles', app=Router([
-            #Route('/', endpoint=get_arts, methods=['GET']),
-            #Route('/{art_id}', endpoint=get_art, methods=['GET']),
-            # Route('/', endpoint=create_art, methods=['POST']),
-            # Route('/{art_id}', endpoint=update_art, methods=['PATCH']),
-            # Route('/{art_id}', endpoint=delete_art, methods=['DELETE']),
+            Route('/{art_id}/markread', endpoint=art_mark_as_read, methods=['PATCH']),
+            Route('/{art_id}/markunread', endpoint=art_mark_as_unread, methods=['PATCH']),
         ])),
         Mount('/folders', app=Router([
-            #Route('/', endpoint=get_folders, methods=['GET']),
+            # Route('/', endpoint=get_folders, methods=['GET']),
             # Route('/{folder_id}', endpoint=get_folder, methods=['GET']),
             # Route('/{folder_id}/feeds/', endpoint=get_feeds_by_folder, methods=['GET']),
-            # Route('/', endpoint=create_folder, methods=['POST']),
-            # Route('/{folder_id}', endpoint=update_folder, methods=['PATCH']),
-            # Route('/{folder_id}', endpoint=delete_folder, methods=['DELETE']),
+            Route('/', endpoint=create_folder, methods=['POST']),
+            Route('/{folder_id}', endpoint=update_folder, methods=['PATCH']),
+            Route('/{folder_id}', endpoint=delete_folder, methods=['DELETE']),
         ]))
     ])),
     #Mount(NYUSEU_FRONT_BASE_URL + 'static/css', StaticFiles(directory="static/css")),
