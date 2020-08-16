@@ -129,3 +129,5 @@ dmypy.json
 .pyre/
 # IDE
 .vscode/
+
+nyuseu-vue/node_modules

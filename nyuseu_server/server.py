@@ -1,6 +1,6 @@
 # coding: utf-8
 """
-   Nyuseu Server - 뉴스 - sauce starlette
+   Nyuseu - 뉴스 - Server
 """
 import json
 import logging
@@ -26,6 +26,7 @@ sys.path.append(PARENT_FOLDER)
 
 import nyuseu_server
 from nyuseu_server.models import Feeds, Folders, Articles
+from nyuseu_server.models import database   # to get the database instance and use RAW sql
 from nyuseu_server.opml_load import load
 
 # load configuration
@@ -46,45 +47,86 @@ async def get_art(request):
       200:
         description: get an article.
         examples:
-          [{"id": 1}, {"title": "Github Rss Feeds"}, {"url": "https://github.com/rss"}, {"folder": 1}, {"date_created": "2020-05-12T01:00"}, {"date_modified": "2020-05-12T18:27"},  {"status": True}]
+          [{"id": 1, 
+           "title": "A great article",
+           "text": "Once upon a time",
+           "image": "",
+           "source_url": "https://github.com/rss",
+           "read": 0,
+           "read_later": 1,
+           "date_created": "2020-04-01T00:00:00",
+           "feeds": {
+               "id": 1, 
+               "title": "Books",
+               "url": "https://wikipedia.org",
+               "folder": 
+                 {"id": 1, "title": "Project", "date_created": "2020-04-01T00:00:00", "date_modified": "2020-04-01T01:00:00"},
+               "date_created": "2020-04-01T00:00:00",
+               "date_modified": "2020-04-01T01:00:00",
+               "date_grabbed": "2020-06-01T00:00:00",
+               "status": 1}
+           }]
     """
+    content = dict()
     art_id = request.path_params['art_id']
-    art = await Articles.objects.select_related("feeds").get(id=art_id)
+    result = await Articles.objects.select_related("feeds").get(id=art_id)
 
-    folder = await Folders.objects.get(id=art.feeds.folder.id)
+    folder = await Folders.objects.get(id=result.feeds.folder.id)
+
     my_folder = {'id': folder.id,
                  'title': folder.title,
                  'date_created': str(folder.date_created),
                  'date_modified': str(folder.date_modified)
-                 }
+                }
+    content = {
+        "id": result["id"],
+        "title": result["title"],
+        "text": result["text"],
+        "image": result["image"],
+        "feeds": {'id': result.feeds.id,
+                 'title': result.feeds.title,
+                 'url': result.feeds.url,
+                 'folder': my_folder,
+                 'date_created': str(result.feeds.date_created),
+                 'date_modified': str(result.feeds.date_modified),
+                 'date_grabbed': str(result.feeds.date_grabbed),
+                 'status': result.feeds.status,
+                },
+        "date_created": str(result["date_created"]),
+        "source_url": result["source_url"],
+        "read": result["read"],
+        "read_later": result["read_later"],
+        }
 
-    payload = {'id': art.id,
-               'title': art.title,
-               'text': art.text,
-               "feeds": {'id': art.feeds.id,
-                         'title': art.feeds.title,
-                         'url': art.feeds.url,
-                         "folder": my_folder,
-                         'date_created': str(art.feeds.date_created),
-                         'date_modified': str(art.feeds.date_modified),
-                         'date_grabbed': str(art.feeds.date_grabbed),
-                         'status': art.feeds.status,
-                         },
-               'date_created': str(art.date_created),
-               'read': art.read}
-    logger.debug(f"get an article {payload}")
-    return JSONResponse(payload)
+    logger.debug(f"get an article {result}")
+    return JSONResponse(content)
 
 
 async def get_arts(request):
     """
     responses:
       200:
-        description: get the list of articles
+        description: get all articles.
         examples:
-          [{"id": 1}, {"title": "My amazing source feeds"}, {"text": "Foo and Bar"},
-          {"source_feeds": 1}, {"date_created": "2020-05-12T01:00"},
-          {"date_modified": "2020-05-12T18:27:2"}, {"read": True}]
+          [{"id": 1, 
+           "title": "A great article",
+           "text": "Once upon a time",
+           "image": "",
+           "source_url": "https://github.com/rss",
+           "read": 0,
+           "read_later": 1,
+           "date_created": "2020-04-01T00:00:00",
+           "feeds": {
+               "id": 1, 
+               "title": "Books",
+               "url": "https://wikipedia.org",
+               "folder": 
+                 {"id": 1, "title": "Project", "date_created": "2020-04-01T00:00:00", "date_modified": "2020-04-01T01:00:00"},
+               "date_created": "2020-04-01T00:00:00",
+               "date_modified": "2020-04-01T01:00:00",
+               "date_grabbed": "2020-06-01T00:00:00",
+               "status": 1}
+           }]
     """
     content = []
     data = await Articles.objects.select_related("feeds").all()
@@ -102,6 +144,7 @@ async def get_arts(request):
                 "id": result["id"],
                 "title": result["title"],
                 "text": result["text"],
+                "image": result["image"],
                 "feeds": {'id': result.feeds.id,
                           'title': result.feeds.title,
                           'url': result.feeds.url,
@@ -112,7 +155,9 @@ async def get_arts(request):
                           'status': result.feeds.status,
                           },
                 "date_created": str(result["date_created"]),
+                "source_url": result["source_url"],
                 "read": result["read"],
+                "read_later": result["read_later"],
             }
         )
     logger.debug("get all articles")
@@ -123,11 +168,27 @@ async def get_arts_by_feed(request):
     """
     responses:
       200:
-        description: get the list of articles for a given feeds
+        description: get articles by feeds id
         examples:
-          [{"id": 1}, {"title": "My amazing source feeds"}, {"text": "Foo and Bar"},
-          {"feeds": 1}, {"date_created": "2020-05-12T01:00"},
-          {"date_modified": "2020-05-12T18:27:2"}, {"read": True}]
+          [{"id": 1, 
+           "title": "A great article",
+           "text": "Once upon a time",
+           "image": "",
+           "source_url": "https://github.com/rss",
+           "read": 0,
+           "read_later": 1,
+           "date_created": "2020-04-01T00:00:00",
+           "feeds": {
+               "id": 1, 
+               "title": "Books",
+               "url": "https://wikipedia.org",
+               "folder": 
+                 {"id": 1, "title": "Project", "date_created": "2020-04-01T00:00:00", "date_modified": "2020-04-01T01:00:00"},
+               "date_created": "2020-04-01T00:00:00",
+               "date_modified": "2020-04-01T01:00:00",
+               "date_grabbed": "2020-06-01T00:00:00",
+               "status": 1}
+           }]
     """
     feeds_id = request.path_params['feeds_id']
     content = []
@@ -146,6 +207,7 @@ async def get_arts_by_feed(request):
                 "id": result["id"],
                 "title": result["title"],
                 "text": result["text"],
+                "image": result["image"],
                 "feeds": {'id': result.feeds.id,
                           'title': result.feeds.title,
                           'url': result.feeds.url,
@@ -156,7 +218,9 @@ async def get_arts_by_feed(request):
                           'status': result.feeds.status,
                           },
                 "date_created": str(result["date_created"]),
+                "source_url": result["source_url"],
                 "read": result["read"],
+                "read_later": result["read_later"],
             }
         )
     logger.debug(f"get all articles for that feed {feeds_id}")
@@ -219,13 +283,19 @@ async def update_art(request):
       200:
         description: update an article.
         examples:
-          [{"id": 1}, {"title": "My nice article"}, {"text": "Foo and Bar twice"}, {"source_feeds": 1}, {"read": True}]
+          [{"id": 1, 
+          "title": "My nice article", 
+          "text": "Foo and Bar twice", 
+          "source_url": "https://example.com/foo/bar", 
+          "read": 1,
+          "read_later": 0}]
     """
     art_id = request.path_params['art_id']
     payload = await request.json()
     title = payload['title']
     feeds_id = payload['feeds_id']
     read = payload['read']
+    read_later = payload['read_later']
     text = payload['text']
     try:
         feeds = await Feeds.objects.get(id=art_id)
@@ -237,11 +307,13 @@ async def update_art(request):
         res = await art.update(title=title,
                                feeds=feeds,
                                text=text,
-                               read=True if read else False)
+                               read=True if read else False,
+                               read_later=True if read_later else False)
     else:   # folder has not been found, update the source_feeds without the folder
         res = await art.update(title=title,
                                text=text,
-                               read=True if read else False)
+                               read=True if read else False,
+                               read_later=True if read_later else False)
     logger.debug(f"update article {art_id} {title}")
     return JSONResponse(res.json())
 
@@ -271,7 +343,19 @@ async def get_feed(request):
       200:
         description: get a source of feeds.
         examples:
-          [{"id": 1}, {"title": "Github Rss Feeds"}, {"url": "https://github.com/rss"}, {"folder": 1}, {"date_created": "2020-05-12T01:00"}, {"date_modified": "2020-05-12T18:27"},  {"status": True}]
+          [{"id": 1, 
+          "title": "Github Rss Feeds",
+          "url": "https://github.com/rss", 
+          "folder": {
+              "id": 1,
+              "title": "Project",
+              "date_created": "2020-04-01T00:00:00",
+              "date_modified": "2020-04-01T01:00:00"
+            },
+          "date_created": "2020-05-12T01:00",
+          "date_modified": "2020-05-12T18:27",
+          "status": 1}
+          ]
     """
     feeds_id = request.path_params['feeds_id']
     feeds = await Feeds.objects.select_related("folder").get(id=feeds_id)
@@ -297,8 +381,18 @@ async def get_feeds(request):
       200:
         description: get the list of source of feeds
         examples:
-          [{"id": 1}, {"title": "Github Rss Feeds"}, {"url": "https://github.com/rss"}, {"folder": 1},
-          {"date_created": "2020-05-12T01:00"}, {"date_modified": "2020-05-12T18:27:2"}, {"status": True}]
+          [{"id": 1,
+          "title": "Github Rss Feeds",
+          "url": "https://github.com/rss", 
+          "folder": {"id": 1, 
+            "title": "Project",
+            "date_created": "2020-04-01T00:00:00",
+            "date_modified": "2020-04-01T01:00:00"
+            },
+          "date_created": "2020-05-12T01:00",
+          "date_modified": "2020-05-12T18:27:2",
+          "status": 1}
+          ]
     """
     data = await Feeds.objects.select_related("folder").all()
     content = [
@@ -327,7 +421,7 @@ async def create_feeds(request):
       200:
         description: create a source of feeds.
         examples:
-          [{"title": "Github Rss Feeds"}, {"url": "https://github.com/rss"}, {"folder": 1}]
+          [{"title": "Github Rss Feeds", "url": "https://github.com/rss", "folder": 1}]
     """
     payload = await request.json()
     title = payload['title']
@@ -341,7 +435,7 @@ async def create_feeds(request):
             res = await Feeds.objects.get(title=title)
 
         except orm.exceptions.NoMatch as e:
-            res = await Feeds.objects.create(title=title, url=url, folder=folder)
+            res = await Feeds.objects.create(title=title, url=url, folder=folder, status=True)
         if res:
             logger.debug(f"create a source feeds {res.id}:{res.title} {res.url}")
             return JSONResponse(json.dumps({'id': res.id,
@@ -364,8 +458,8 @@ async def update_feeds(request):
       200:
         description: update a source of feeds.
         examples:
-          [{"id": 1}, {"title": "Github Rss Feeds"}, {"url": "https://github.com/rss"}, {"folder": 1},
-          {"status": True}]
+          [{"id": 1, "title": "Github Rss Feeds", "url": "https://github.com/rss", "folder": 1,
+          "status": True}]
     """
     feeds_id = request.path_params['feeds_id']
     payload = await request.json()
@@ -417,7 +511,11 @@ async def get_folder(request):
       200:
         description: get a folder.
         examples:
-          [{"id": 1}, {"title": "My folder name"}]
+          [{"id": 1, 
+           "title": "My folder name",
+           "date_created": "2020-05-12T01:00",
+           "date_modified": "2020-05-12T18:27:08"}
+           ]
     """
     folder_id = request.path_params['folder_id']
     folder = await Folders.objects.get(id=folder_id)
@@ -434,9 +532,30 @@ async def get_feeds_by_folder(request):
     """
     responses:
       200:
-        description: get the feeds of a given folder.
+        description: get the list of folders and the feeds
         examples:
-          [{"id": 1}]
+          [{"id": 1,
+            "title": "My folder name",
+            "date_created": "2020-05-10T01:00",
+            "date_modified": "2020-05-10T12:00",
+            "unread": 0,
+            "feeds": [{
+               "id": 1, 
+               "title": "Books",
+               "url": "https://wikipedia.org",
+               "date_created": "2020-04-01T00:00:00",
+               "date_modified": "2020-04-01T01:00:00",
+               "date_grabbed": "2020-06-01T00:00:00",
+               "status": 1},
+               {"id": 2, 
+               "title": "Cooking",
+               "url": "https://www.maangchi.com/",
+               "date_created": "2020-04-01T00:00:00",
+               "date_modified": "2020-04-01T01:00:00",
+               "date_grabbed": "2020-06-01T00:00:00",
+               "status": 1}
+               ]
+          }]
     """
     folder_id = request.path_params['folder_id']
 
@@ -466,21 +585,80 @@ async def get_folders(request):
     """
     responses:
       200:
-        description: get the list of folders.
+        description: get the list of folders and the feeds
         examples:
-          [{"id": 1}, {"title": "My folder name"}, {"date_created": "2020-05-10T01:00"}, {"date_modified": "2020-05-10T12:00"},
-          {"id": 2}, {"title": "My folder name2"}, {"date_created": "2020-05-10T01:00"}, {"date_modified": "2020-05-10T01:00"}]
+          [{"id": 1,
+            "title": "My folder name",
+            "date_created": "2020-05-10T01:00",
+            "date_modified": "2020-05-10T12:00",
+            "unread": 0,
+            "feeds": {
+               "id": 1, 
+               "title": "Books",
+               "url": "https://wikipedia.org",
+               "date_created": "2020-04-01T00:00:00",
+               "date_modified": "2020-04-01T01:00:00",
+               "date_grabbed": "2020-06-01T00:00:00",
+               "status": 1}
+          },
+          {"id": 2,
+           "title": "My folder name2", 
+           "date_created": "2020-05-10T01:00",
+           "date_modified": "2020-05-10T01:00",
+           "unread": 12,
+           "feeds": {
+              "id": 1, 
+              "title": "Books",
+              "url": "https://wikipedia.org",
+              "date_created": "2020-04-01T00:00:00",
+              "date_modified": "2020-04-01T01:00:00",
+              "date_grabbed": "2020-06-01T00:00:00",
+              "status": 1}
+          }]
     """
-    data = await Folders.objects.all()
-    content = [
-        {
-            "id": result["id"],
-            "title": result["title"],
-            "date_created": result["date_created"],
-            "date_modified": result["date_modified"],
-        }
-        for result in data
-    ]
+    # raw SQL to retrieve in same time, the folders + number of unread articles
+    query = """
+    SELECT folders.id,
+       folders.title,
+       folders.date_created,
+       folders.date_modified,
+       COUNT(CASE WHEN NOT articles.read THEN '1' ELSE NULL END) AS unread
+  FROM folders
+  LEFT OUTER JOIN feeds
+    ON (folders.id = feeds.folder)
+  LEFT OUTER JOIN articles
+    ON (feeds.id = articles.feeds)
+ GROUP BY folders.id,
+       folders.title,
+       folders.date_created,
+       folders.date_modified    
+    """
+    data = await database.fetch_all(query=query)    
+    content = []
+    for result in data:
+
+        data_feed = await Feeds.objects.filter(folder__id=result['id']).all()
+        content_feed = [
+            {
+                "id": result_feed["id"],
+                "title": result_feed["title"],
+                "url": result_feed["url"],
+                "date_created": str(result_feed["date_created"]),
+                "date_modified": str(result_feed["date_modified"]),
+                "status": result_feed["status"],
+            }
+            for result_feed in data_feed
+        ]
+
+        content.append({
+                "id": result["id"],
+                "title": result["title"],
+                "date_created": result["date_created"],
+                "date_modified": result["date_modified"],
+                "unread": result["unread"],
+                "feeds": content_feed
+                })
+            
     logger.debug("get list of folders")
     return JSONResponse(content)
 
@@ -548,8 +726,7 @@ async def opml(request):
       200:
         description: import an OPML file
         examples:
-          [{"opml": "http://url/to/opml"}]
-          [{"opml": "/local/path/to/opml/file"}]
+          [{"opml": "http://url/to/opml or /local/path/to/opml/file"}]
     """
     opml_resource = request.path_params['opml']
     if opml_resource.endswith('.opml'):
@@ -617,19 +794,18 @@ app = Router(routes=[
 ])
 
 # let's mount each Route
-main_app.mount('/', app=app)
+main_app.mount('/api', app=app)
 
 # Bootstrap
 if __name__ == '__main__':
     print('Nyuseu Server - 뉴스 - Feeds Reader Server - Starlette powered')
-    assert sys.argv[-1] in ("run", "schema"), "Usage: example.py [run|schema]"
 
-    if sys.argv[-1] == "run":
+    if sys.argv[-1] == "schema":
+        schema = schemas.get_schema(routes=app.routes)
+        print(yaml.dump(schema, default_flow_style=False))
+    else:
         uvicorn.run(main_app,
                     host=settings('NYUSEU_SERVER_HOST', default='127.0.0.1'),
                     port=settings('NYUSEU_SERVER_PORT',
-                                  cast=int,
-                                  default=8001))
-    elif sys.argv[-1] == "schema":
-        schema = schemas.get_schema(routes=app.routes)
-        print(yaml.dump(schema, default_flow_style=False))
+                    cast=int,
+                    default=8001))

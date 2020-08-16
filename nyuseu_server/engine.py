@@ -4,6 +4,7 @@
 """
 # std lib
 from __future__ import unicode_literals
+from bs4 import BeautifulSoup
 import feedparser
 import datetime
 import logging.config
@@ -12,6 +13,8 @@ import sys
 import time
 # external lib
 import arrow
+from rich.console import Console
+
 from starlette.config import Config
 
 logging.config.fileConfig('logging.conf')
@@ -30,6 +33,12 @@ __author__ = 'FoxMaSk'
 __all__ = ['go']
 
 
+# Get an instance of a logger
+logger = logging.getLogger(__name__)
+
+console = Console()
+
+
 def get_published(entry) -> datetime:
     """
     get the 'published' attribute
@@ -46,7 +55,6 @@ def get_published(entry) -> datetime:
     elif hasattr(entry, 'updated_parsed'):
         if entry.updated_parsed is not None:
             published = datetime.datetime.utcfromtimestamp(time.mktime(entry.updated_parsed))
-    logger.debug(published)
     return published
 
 
@@ -67,7 +75,26 @@ def _get_content(data, which_content):
                 content = data.get(which_content)[0].value
         else:
             content = data.get(which_content)
-    logger.debug(content)
+    return content
+
+
+def revamped_images(content):
+    """
+
+    """
+    soup = BeautifulSoup(content, 'html.parser')
+    images = soup.find_all('img')
+    if images:
+        i = 0
+        card_class = 'card-img-top'
+        for image in images:
+            if i > 0:
+                card_class = 'card-img'
+            image['class'] = card_class
+            del image['height']
+            del image['width']
+            i += 1
+        content = soup
     return content
 
 
@@ -85,18 +112,63 @@ def set_content(entry):
     if content == '':
         if entry.get('description'):
             content = entry.get('description')
-    logger.debug(content)
-    return content
+
+    image = get_image(entry, content)
+    content = revamped_images(content)
+    return content, image
+
+
+def from_feed(entry):
+    """
+
+    """
+    new_image = "<img src=\"{src}\" title=\"{title}\" class=\"card-img-top\" />"
+    for link in entry.get('links'):
+        if link['type'] in ('image/jpeg', 'image/png', 'image/jpg', 'image/gif') and link['rel'] == 'enclosure':
+            new_image = new_image.format(src=link['href'], title=entry.title)
+            return new_image
+    if 'media_thumbnail' in entry:
+        for link in entry.get('media_thumbnail'):
+            new_image = new_image.format(src=link['url'], title=entry.title)
+            return new_image
+    return ''
+
+
+def from_content(content):
+    """
+
+    """
+    soup = BeautifulSoup(content, 'html.parser')
+    new_image = ""
+    if soup.find_all('img'):
+        image = soup.find_all('img')[0]
+        alt = image['alt'] if 'alt' in image else ''
+        title = image['title'] if 'title' in image else ''
+        new_image = "<img src=\"{src}\" alt=\"{alt}\" title=\"{title}\" class=\"card-img-top\" />"
+        new_image = new_image.format(src=image['src'], alt=alt, title=title)
+    return new_image
+
+
+def get_image(entry, content):
+    """
+
+    """
+    new_image = from_feed(entry)
+    if new_image == '':
+        new_image = from_content(content)
+
+    return str(new_image)
 
 
 async def go():
     """
 
     """
-    logger.info('Nyuseu Server Engine - 뉴스 - Feeds Reader Server - in progress')
+    console.print('Nyuseu Server Engine - 뉴스 - Feeds Reader Server - in progress', style="green")
     feeds = await Feeds.objects.all()
     for my_feeds in feeds:
         rss = Rss()
+        console.print(f"Feeds {my_feeds.url}", style="magenta")
         feeds = await rss.get_data(**{'url_to_parse': my_feeds.url, 'bypass_bozo': config('BYPASS_BOZO')})
         now = arrow.utcnow().to(config('TIME_ZONE')).format('YYYY-MM-DDTHH:mm:ssZZ')
         date_grabbed = arrow.get(my_feeds.date_grabbed).format('YYYY-MM-DDTHH:mm:ssZZ')
@@ -111,21 +183,26 @@ async def go():
                 published = arrow.get(published).to(config('TIME_ZONE')).format('YYYY-MM-DDTHH:mm:ssZZ')
             # last triggered execution
             if published is not None and now >= published >= date_grabbed:
-                content = set_content(entry)
-                res = await Articles.objects.create(title=entry.title, text=content, feeds=my_feeds)
+                content, image = set_content(entry)
+                # add an article
+                res = await Articles.objects.create(title=entry.title,
+                                                    text=str(content),
+                                                    image=str(image),
+                                                    feeds=my_feeds,
+                                                    source_url=entry.link)
                 if res:
                     created_entries += 1
                     now = arrow.utcnow().to(config('TIME_ZONE')).format('YYYY-MM-DD HH:mm:ssZZ')
                     source_feeds = await Feeds.objects.get(id=my_feeds.id)
                     await source_feeds.update(date_grabbed=now)
-                    logger.info(f'Feeds {my_feeds.title} : {entry.title}')
+                    console.print(f'Feeds {my_feeds.title} : {entry.title}', style="blue")
 
         if read_entries:
-            logger.info(f'{my_feeds.title}: Entries created {created_entries} / Read {read_entries}')
+            console.print(f'{my_feeds.title}: Entries created {created_entries} / Read {read_entries}', style="magenta")
         else:
-            logger.info(f'{my_feeds.title}: no feeds read')
+            console.print(f'{my_feeds.title}: no feeds read', style="blue")
 
-    logger.info('Nyuseu Server Engine - 뉴스 - Feeds Reader Server - Finished!')
+    console.print('Nyuseu Server Engine - 뉴스 - Feeds Reader Server - Finished!', style="green")
 
 # Bootstrap
 if __name__ == '__main__':

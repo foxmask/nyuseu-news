@@ -48,9 +48,12 @@ class Articles(orm.Model):
     id = orm.Integer(primary_key=True)
     feeds = orm.ForeignKey(Feeds)
     title = orm.String(max_length=255)
+    image = orm.Text(allow_null=True)
+    source_url = orm.Text(allow_null=True)
     text = orm.Text()
     date_created = orm.DateTime(default=datetime.datetime.now)
     read = orm.Boolean(default=False)
+    read_later = orm.Boolean(default=False)
 
 
 # Bootstrap

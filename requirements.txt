@@ -1,8 +1,5 @@
-arrow
-feedparser
-jinja2
-httpx
-opml
-pyyaml
 starlette
 uvicorn
+pyaml
+orm
+aiosqlite
