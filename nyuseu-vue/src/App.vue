@@ -11,10 +11,9 @@
 </template>
 
 <script>
-//import axios from 'axios'
-import Articles from  './components/Articles.vue'
-import Article from  './components/Article.vue'
-import SideBar from './components/SideBar.vue'
+import Articles from  '@/components/Articles.vue'
+import Article from  '@/components/Article.vue'
+import SideBar from '@/components/SideBar.vue'
 
 export default {
   name: 'App',
@@ -32,7 +31,7 @@ export default {
         return 0
       }
     }
-  }   
+  }
 }
 </script>
 

@@ -1,6 +1,6 @@
 import Vue from 'vue'
 import VueRouter from 'vue-router'
-import App from './App.vue'
+import App from '@/App.vue'
 
 Vue.use(VueRouter)
 import { BootstrapVue, IconsPlugin } from 'bootstrap-vue'
@@ -14,19 +14,24 @@ import 'bootstrap-vue/dist/bootstrap-vue.css'
 
 Vue.config.productionTip = false
 
-import Articles from './components/Articles'
-import Article from './components/Article'
+import Articles from '@/components/Articles'
+import Article from '@/components/Article'
 
 const routes = [
-  { 
+  {
     path: '/article/:articleId',
     name: 'article',
     component: Article
   },
-  { 
+  {
     path: '/feeds/:feedId/articles/',
     name: 'articlesByFeeds',
     component: Articles
+  },
+  {
+    path: '/',
+    name: 'home',
+    component: App
   },
 ]
 

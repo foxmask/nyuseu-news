@@ -3,7 +3,7 @@
   <b-btn v-b-toggle.sidebar>Sidebar Menu</b-btn>
   <b-sidebar id="sidebar" title="Nyuseu - 뇨스" shadow>
     <b-nav vertical>
-      <b-nav-item href="/">
+      <b-nav-item :to="{ name: 'home'}">
         <b-icon icon="cup-straw"></b-icon><span class="ml-2">All articles</span>
       </b-nav-item>
       <template v-for="folder in folders">
@@ -11,7 +11,7 @@
         <b-icon icon="bar-chart-fill"></b-icon><span class="ml-2">{{ folder.title }} ({{ folder.unread }})</span>
       </b-nav-item>
       <b-nav-item v-if="folder.feeds"
-                  :key="folder.id" 
+                  :key="folder.id"
                   link-classes="d-flex align-items-center"
                   @click="folder.isOpen = !folder.isOpen">
         <b-icon icon="play"></b-icon>
@@ -24,7 +24,7 @@
                   :id="`collapse-folder-${folder.id}`"
                   tag="li">
         <b-nav-item v-for="{ id, title } in folder.feeds"
-                  :key="id" 
+                  :key="id"
                   :to="{ name: 'articlesByFeeds', params: {feedId: id }}">
           <span class="ml-2">{{ title }}</span>
         </b-nav-item>
@@ -44,7 +44,7 @@ export default {
     return {
       folders: []
     }
-  }, 
+  },
   mounted () {
     axios
     .get('/api/nyuseu/folders/')

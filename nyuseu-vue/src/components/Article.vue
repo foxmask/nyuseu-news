@@ -16,16 +16,15 @@
   <div v-if="loading" class="loading">
     Loading...
   </div>
-
   <div v-if="error" class="error">
     {{ error }}
-  </div>  
+  </div>
 </b-col>
 </template>
 
 <script>
 import axios from 'axios'
-import ArticleFooter from './ArticleFooter'
+import ArticleFooter from '@/components/ArticleFooter'
 
 export default {
   name: "Article",
@@ -33,7 +32,7 @@ export default {
     ArticleFooter
   },
   data ()  {
-    return { 
+    return {
       article: Object,
       loading: null,
       error: null
@@ -51,17 +50,17 @@ export default {
     getArticle(articleId) {
       axios
       .get('/api/nyuseu/articles/' + articleId)
-      .then(response => {this.article = response.data})   
-    },    
+      .then(response => {this.article = response.data})
+    },
     fetchData () {
       if (this.$route.params.articleId) {
         this.article = null
         this.error = null
         this.loading = true
 
-        this.getArticle(this.$route.params.articleId, (err, article) => {        
+        this.getArticle(this.$route.params.articleId, (err, article) => {
           this.loading = false
-          
+
           if (err) {
             this.error = err.toString()
           } else {
@@ -81,6 +80,6 @@ export default {
         return 0
       }
     }
-  }   
+  }
 }
 </script>

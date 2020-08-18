@@ -17,7 +17,7 @@
           <router-link :to="{ name: 'article', params: { articleId: article.id }}" title="View the complete article">{{ article.title }}</router-link>
           </h5>
           <h6 class="card-subtitle mb-2 text-muted">{{ article.date_created }}</h6>
-          <p class="card-text" v-html="article.text"></p>
+          <p class="card-text" v-html="$options.filters.truncate(article.text, 200, '...')"></p>
         </div>
         <article-footer :article="Object.assign({}, article)" />
       </div>
@@ -27,17 +27,16 @@
   <div v-if="loading" class="loading">
     Loading...
   </div>
-
   <div v-if="error" class="error">
     {{ error }}
-  </div>  
+  </div>
 </div>
 </template>
 
 <script>
 import axios from 'axios'
 
-import ArticleFooter from './ArticleFooter'
+import ArticleFooter from '@/components/ArticleFooter'
 
 export default {
   name: "Articles",
@@ -48,7 +47,7 @@ export default {
     return {
       articles: [],
       loading: false,
-      error: null      
+      error: null
     }
   },
   created () {
@@ -63,7 +62,7 @@ export default {
     getArticles(feedId) {
       axios
       .get('/api/nyuseu/feeds/' + feedId + '/articles')
-      .then(response => {this.articles = response.data})   
+      .then(response => {this.articles = response.data})
     },
     fetchData () {
       if (this.feedId) {
@@ -71,9 +70,9 @@ export default {
         this.error = null
         this.loading = true
 
-        this.getArticles(this.feedId, (err, articles) => {        
+        this.getArticles(this.feedId, (err, articles) => {
           this.loading = false
-          
+
           if (err) {
             this.error = err.toString()
           } else {
@@ -81,20 +80,19 @@ export default {
           }
 
         })
+      } else {
+        // whe we go back from one article or articles from feed, to the main page ...
+        axios
+        .get('/api/nyuseu/articles/')
+        .then(response => {this.articles = response.data})
       }
     }
-  }, 
+  },
   mounted () {
     // get the articles from a given feed
     if (this.feedId) {
       axios
       .get('/api/nyuseu/feeds/' + this.feedId + '/articles')
-      .then(response => {this.articles = response.data})
-    } 
-    // get all the articles
-    else {
-      axios
-      .get('/api/nyuseu/articles/')
       .then(response => {this.articles = response.data})
     }
   },
@@ -102,7 +100,7 @@ export default {
     truncate (value,  length,  suffix)  {
       if  (value.length  >  length)  {
         value = value.substring(0,  length)  +  suffix;
-      }   
+      }
       return  value;
     }
   },
@@ -116,6 +114,6 @@ export default {
         return 0
       }
     }
-  }  
+  }
 }
 </script>
