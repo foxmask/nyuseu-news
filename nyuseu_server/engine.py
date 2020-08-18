@@ -28,15 +28,10 @@ from nyuseu_server.models import Feeds, Articles
 from nyuseu_server.rss import Rss
 
 config = Config('.env')
+console = Console()
 
 __author__ = 'FoxMaSk'
 __all__ = ['go']
-
-
-# Get an instance of a logger
-logger = logging.getLogger(__name__)
-
-console = Console()
 
 
 def get_published(entry) -> datetime:
@@ -189,7 +184,9 @@ async def go():
                                                     text=str(content),
                                                     image=str(image),
                                                     feeds=my_feeds,
-                                                    source_url=entry.link)
+                                                    source_url=entry.link,
+                                                    read=False,
+                                                    read_later=False)
                 if res:
                     created_entries += 1
                     now = arrow.utcnow().to(config('TIME_ZONE')).format('YYYY-MM-DD HH:mm:ssZZ')

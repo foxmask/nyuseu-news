@@ -2,4 +2,8 @@ starlette
 uvicorn
 pyaml
 orm
+opml
 aiosqlite
+arrow
+feedparser
+bs4
