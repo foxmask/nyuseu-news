@@ -1,8 +1,7 @@
 <template>
 <div>
   <div v-if="articles" class="row row-cols-3 row-cols-md-3">
-    <template v-for="article in articles">
-    <div class="card-deck mb-4" :key="article.id">
+    <div class="card-deck mb-4" v-for="article in articles" :key="article.id">
       <div class="card">
         <router-link :to="{ name: 'article', params: { articleId: article.id }}" v-html="article.image"></router-link>
         <div v-if="article.read" class="card-body text-muted">
@@ -22,7 +21,6 @@
         <article-footer :article="Object.assign({}, article)" />
       </div>
     </div>
-    </template>
   </div>
   <div v-if="loading" class="loading">
     Loading...
