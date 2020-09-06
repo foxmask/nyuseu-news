@@ -1,6 +1,6 @@
 # Nyuseu Server
 
-!Nyuseu](https://raw.githubusercontent.com/foxmask/nyuseu-news/master/home.png)
+![Nyuseu](https://raw.githubusercontent.com/foxmask/nyuseu-news/master/home.png)
 
 ## Prerequisites
 

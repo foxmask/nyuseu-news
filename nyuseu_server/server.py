@@ -441,7 +441,8 @@ async def get_art(request):
                "title": "Books",
                "url": "https://wikipedia.org",
                "folder":
-                 {"id": 1, "title": "Project", "date_created": "2020-04-01T00:00:00", "date_modified": "2020-04-01T01:00:00"},
+                 {"id": 1, "title": "Project", "date_created": "2020-04-01T00:00:00",
+                                               "date_modified": "2020-04-01T01:00:00"},
                "date_created": "2020-04-01T00:00:00",
                "date_modified": "2020-04-01T01:00:00",
                "date_grabbed": "2020-06-01T00:00:00",
@@ -501,7 +502,8 @@ async def get_arts(request):
                "title": "Books",
                "url": "https://wikipedia.org",
                "folder":
-                 {"id": 1, "title": "Project", "date_created": "2020-04-01T00:00:00", "date_modified": "2020-04-01T01:00:00"},
+                 {"id": 1, "title": "Project", "date_created": "2020-04-01T00:00:00",
+                                               "date_modified": "2020-04-01T01:00:00"},
                "date_created": "2020-04-01T00:00:00",
                "date_modified": "2020-04-01T01:00:00",
                "date_grabbed": "2020-06-01T00:00:00",
@@ -563,7 +565,8 @@ async def get_arts_by_feed(request):
                "title": "Books",
                "url": "https://wikipedia.org",
                "folder":
-                 {"id": 1, "title": "Project", "date_created": "2020-04-01T00:00:00", "date_modified": "2020-04-01T01:00:00"},
+                 {"id": 1, "title": "Project", "date_created": "2020-04-01T00:00:00",
+                                               "date_modified": "2020-04-01T01:00:00"},
                "date_created": "2020-04-01T00:00:00",
                "date_modified": "2020-04-01T01:00:00",
                "date_grabbed": "2020-06-01T00:00:00",
