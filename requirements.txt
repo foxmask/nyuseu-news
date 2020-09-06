@@ -1,9 +1,10 @@
-starlette
-uvicorn
-pyaml
-orm
-opml
 aiosqlite
 arrow
-feedparser
 bs4
+feedparser
+opml
+orm
+pyaml
+rich
+starlette
+uvicorn

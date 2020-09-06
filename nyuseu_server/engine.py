@@ -4,28 +4,26 @@
 """
 # std lib
 from __future__ import unicode_literals
+import arrow
 from bs4 import BeautifulSoup
 import feedparser
 import datetime
 import logging.config
 import os
+from rich.console import Console
+from starlette.config import Config
 import sys
 import time
-# external lib
-import arrow
-from rich.console import Console
-
-from starlette.config import Config
-
-logging.config.fileConfig('logging.conf')
-logger = logging.getLogger(__name__)
 
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 PARENT_FOLDER = os.path.dirname(PROJECT_DIR)
 sys.path.append(PARENT_FOLDER)
 
-from nyuseu_server.models import Feeds, Articles
-from nyuseu_server.rss import Rss
+from nyuseu_server.models import Feeds, Articles  # noqa: E402
+from nyuseu_server.rss import Rss  # noqa: E402
+
+logging.config.fileConfig('logging.conf')
+logger = logging.getLogger(__name__)
 
 config = Config('.env')
 console = Console()

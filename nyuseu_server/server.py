@@ -17,16 +17,16 @@ import sys
 import uvicorn
 import yaml
 
-logger = logging.getLogger(__name__)
-
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 PARENT_FOLDER = os.path.dirname(PROJECT_DIR)
 sys.path.append(PARENT_FOLDER)
 
-import nyuseu_server
-from nyuseu_server.models import Feeds, Folders, Articles
-from nyuseu_server.models import database  # to get the database instance and use RAW sql
-from nyuseu_server.opml_load import load
+import nyuseu_server  # noqa: E402
+from nyuseu_server.models import Feeds, Folders, Articles  # noqa: E402
+from nyuseu_server.models import database  # noqa: E402
+from nyuseu_server.opml_load import load  # noqa: E402
+
+logger = logging.getLogger(__name__)
 
 # load configuration
 settings = Config('.env')
@@ -166,7 +166,7 @@ async def get_folders(request):
  GROUP BY folders.id,
        folders.title,
        folders.date_created,
-       folders.date_modified    
+       folders.date_modified
     """
     data = await database.fetch_all(query=query)
     content = []
@@ -209,7 +209,7 @@ async def create_folder(request):
     title = payload['title']
     try:
         res = await Folders.objects.get(title=title)
-    except orm.exceptions.NoMatch as e:
+    except orm.exceptions.NoMatch:
         res = await Folders.objects.create(title=title)
     data = json.dumps({'title': title, 'id': res.id})
     logger.debug(data)
@@ -352,7 +352,7 @@ async def create_feeds(request):
         try:
             res = await Feeds.objects.get(title=title)
 
-        except orm.exceptions.NoMatch as e:
+        except orm.exceptions.NoMatch:
             res = await Feeds.objects.create(title=title, url=url, folder=folder, status=True)
         if res:
             logger.debug(f"create a source feeds {res.id}:{res.title} {res.url}")
@@ -428,7 +428,7 @@ async def get_art(request):
       200:
         description: get an article.
         examples:
-          [{"id": 1, 
+          [{"id": 1,
            "title": "A great article",
            "text": "Once upon a time",
            "image": "",
@@ -437,10 +437,10 @@ async def get_art(request):
            "read_later": 1,
            "date_created": "2020-04-01T00:00:00",
            "feeds": {
-               "id": 1, 
+               "id": 1,
                "title": "Books",
                "url": "https://wikipedia.org",
-               "folder": 
+               "folder":
                  {"id": 1, "title": "Project", "date_created": "2020-04-01T00:00:00", "date_modified": "2020-04-01T01:00:00"},
                "date_created": "2020-04-01T00:00:00",
                "date_modified": "2020-04-01T01:00:00",
@@ -488,7 +488,7 @@ async def get_arts(request):
       200:
         description: get all articles.
         examples:
-          [{"id": 1, 
+          [{"id": 1,
            "title": "A great article",
            "text": "Once upon a time",
            "image": "",
@@ -497,10 +497,10 @@ async def get_arts(request):
            "read_later": 1,
            "date_created": "2020-04-01T00:00:00",
            "feeds": {
-               "id": 1, 
+               "id": 1,
                "title": "Books",
                "url": "https://wikipedia.org",
-               "folder": 
+               "folder":
                  {"id": 1, "title": "Project", "date_created": "2020-04-01T00:00:00", "date_modified": "2020-04-01T01:00:00"},
                "date_created": "2020-04-01T00:00:00",
                "date_modified": "2020-04-01T01:00:00",
@@ -550,7 +550,7 @@ async def get_arts_by_feed(request):
       200:
         description: get articles by feeds id
         examples:
-          [{"id": 1, 
+          [{"id": 1,
            "title": "A great article",
            "text": "Once upon a time",
            "image": "",
@@ -559,10 +559,10 @@ async def get_arts_by_feed(request):
            "read_later": 1,
            "date_created": "2020-04-01T00:00:00",
            "feeds": {
-               "id": 1, 
+               "id": 1,
                "title": "Books",
                "url": "https://wikipedia.org",
-               "folder": 
+               "folder":
                  {"id": 1, "title": "Project", "date_created": "2020-04-01T00:00:00", "date_modified": "2020-04-01T01:00:00"},
                "date_created": "2020-04-01T00:00:00",
                "date_modified": "2020-04-01T01:00:00",
