@@ -168,6 +168,9 @@ async def go():
         read_entries = 0
         created_entries = 0
         for entry in feeds.entries:
+            # it may happened that feeds does not provide title ... yes !
+            if 'title' not in entry:
+                entry['title'] = entry.link
             read_entries += 1
             # entry.*_parsed may be None when the date in a RSS Feed is invalid
             # so will have the "now" date as default
@@ -182,14 +185,14 @@ async def go():
                                                     text=str(content),
                                                     image=str(image),
                                                     feeds=my_feeds,
-                                                    source_url=entry.link,
-                                                    read=False,
-                                                    read_later=False)
+                                                    source_url=entry.link)
                 if res:
                     created_entries += 1
                     now = arrow.utcnow().to(config('TIME_ZONE')).format('YYYY-MM-DD HH:mm:ssZZ')
                     source_feeds = await Feeds.objects.get(id=my_feeds.id)
-                    await source_feeds.update(date_grabbed=now)
+                    # await source_feeds.update(date_grabbed=now)
+                    source_feeds.date_grabbed = now
+                    await source_feeds.save()
                     console.print(f'Feeds {my_feeds.title} : {entry.title}', style="blue")
 
         if read_entries:
