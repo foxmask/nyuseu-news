@@ -1,7 +1,8 @@
 aiosqlite==0.15.0
 arrow==0.17.0
 beautifulsoup4==4.9.3
-feedparser==5.2.1
+feedparser==6.0.1
+feedparser-data==0.1.0
 httpx==0.16.1
 opml==0.5
 orm==0.1.5

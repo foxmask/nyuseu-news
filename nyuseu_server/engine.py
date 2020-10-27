@@ -20,7 +20,7 @@ PARENT_FOLDER = os.path.dirname(PROJECT_DIR)
 sys.path.append(PARENT_FOLDER)
 
 from nyuseu_server.models import Feeds, Articles  # noqa: E402
-from nyuseu_server.rss import Rss  # noqa: E402
+from feedparser_data import RssAsync as Rss  # noqa: E402
 
 logging.config.fileConfig('logging.conf')
 logger = logging.getLogger(__name__)
