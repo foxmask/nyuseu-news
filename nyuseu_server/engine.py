@@ -167,38 +167,38 @@ async def go():
         date_grabbed = arrow.get(my_feeds.date_grabbed).format('YYYY-MM-DDTHH:mm:ssZZ')
         read_entries = 0
         created_entries = 0
-        for entry in feeds.entries:
-            # it may happened that feeds does not provide title ... yes !
-            if 'title' not in entry:
-                entry['title'] = entry.link
-            read_entries += 1
-            # entry.*_parsed may be None when the date in a RSS Feed is invalid
-            # so will have the "now" date as default
-            published = get_published(entry)
-            if published:
-                published = arrow.get(published).to(config('TIME_ZONE')).format('YYYY-MM-DDTHH:mm:ssZZ')
-            # last triggered execution
-            if published is not None and now >= published >= date_grabbed:
-                content, image = set_content(entry)
-                # add an article
-                res = await Articles.objects.create(title=entry.title,
-                                                    text=str(content),
-                                                    image=str(image),
-                                                    feeds=my_feeds,
-                                                    source_url=entry.link)
-                if res:
-                    created_entries += 1
-                    now = arrow.utcnow().to(config('TIME_ZONE')).format('YYYY-MM-DD HH:mm:ssZZ')
-                    source_feeds = await Feeds.objects.get(id=my_feeds.id)
-                    # await source_feeds.update(date_grabbed=now)
-                    source_feeds.date_grabbed = now
-                    await source_feeds.save()
-                    console.print(f'Feeds {my_feeds.title} : {entry.title}', style="blue")
+        if 'entries' in feeds:
+            for entry in feeds['entries']:
+                # it may happened that feeds does not provide title ... yes !
+                if 'title' not in entry:
+                    entry['title'] = entry.link
+                read_entries += 1
+                # entry.*_parsed may be None when the date in a RSS Feed is invalid
+                # so will have the "now" date as default
+                published = get_published(entry)
+                if published:
+                    published = arrow.get(published).to(config('TIME_ZONE')).format('YYYY-MM-DDTHH:mm:ssZZ')
+                # last triggered execution
+                if published is not None and now >= published >= date_grabbed:
+                    content, image = set_content(entry)
+                    # add an article
+                    res = await Articles.objects.create(title=entry.title,
+                                                        text=str(content),
+                                                        image=str(image),
+                                                        feeds=my_feeds,
+                                                        source_url=entry.link)
+                    if res:
+                        created_entries += 1
+                        now = arrow.utcnow().to(config('TIME_ZONE')).format('YYYY-MM-DD HH:mm:ssZZ')
+                        source_feeds = await Feeds.objects.get(id=my_feeds.id)
+                        await source_feeds.update(date_grabbed=now)
+                        console.print(f'Feeds {my_feeds.title} : {entry.title}', style="blue")
 
-        if read_entries:
-            console.print(f'{my_feeds.title}: Entries created {created_entries} / Read {read_entries}', style="magenta")
-        else:
-            console.print(f'{my_feeds.title}: no feeds read', style="blue")
+            if read_entries:
+                console.print(f'{my_feeds.title}: Entries created {created_entries} '
+                              f'/ Read {read_entries}', style="magenta")
+            else:
+                console.print(f'{my_feeds.title}: no feeds read', style="blue")
 
     console.print('Nyuseu Server Engine - 뉴스 - Feeds Reader Server - Finished!', style="green")
 
