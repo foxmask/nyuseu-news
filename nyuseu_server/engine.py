@@ -135,14 +135,11 @@ def from_content(content):
     new_image = ""
     if soup.find_all('img'):
         image = soup.find_all('img')[0]
-        alt = image['alt'] if 'alt' in image else ''
+        alt = 'alt="' + image['alt'] + '"' if 'alt' in image else ''
+        src = 'src="' + image['src'] + '"' if 'src' in image else ''
         title = image['title'] if 'title' in image else ''
-        if 'src' in image:
-            new_image = "<img src=\"{src}\" alt=\"{alt}\" title=\"{title}\" class=\"card-img-top\" />"
-            new_image = new_image.format(src=image['src'], alt=alt, title=title)
-        else:
-            new_image = "<img alt=\"{alt}\" title=\"{title}\" class=\"card-img-top\" />"
-            new_image = new_image.format(alt=alt, title=title)
+        new_image = "<img {src} {alt} title=\"{title}\" class=\"card-img-top\" />"
+        new_image = new_image.format(src=src, alt=alt, title=title)
     return new_image
 
 
