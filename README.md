@@ -4,9 +4,23 @@
 
 ## Prerequisites
 
+### Front
+VueJS 2.x
+
+
+### Back
+
 Python 3.7+
+Starlette 
+
+## :package: Installation 'BACK'
 
 ```commandline
+python3 -m venv nyuseu-news
+cd nyuseu-news
+source bin/activate
+git clone https://gitlab.com/annyong/nyuseu-news.git
+cd nyuseu-news
 cd nyuseu_server
 ```
 
@@ -96,3 +110,8 @@ python engine.py
 2020-05-15 15:32:02,197 - INFO - engine - jeuxvideo.com - PlayStation 4: Entries created 0 / Read 20
 2020-05-15 15:32:02,198 - INFO - engine - Nyuseu Server Engine - 뉴스 - Feeds Reader Server - Finished!
 ```
+
+
+## :package: Installation 'FRONT'
+
+![Nyuseu Vue](https://gitlab.com/annyong/nyuseu-news/-/blob/master/nyuseu-vue/README.md)
