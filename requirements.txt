@@ -1,5 +1,5 @@
 aiosqlite==0.17.0
-arrow==1.1.0
+arrow==1.1.1
 beautifulsoup4==4.9.3
 feedparser==6.0.8
 feedparser-data==0.1.1
@@ -7,6 +7,6 @@ httpx==0.18.2
 opml==0.5
 orm==0.1.5
 pyaml==20.4.0
-rich==10.4.0
-starlette==0.15.0
+rich==10.6.0
+starlette==0.16.0
 uvicorn==0.14.0
