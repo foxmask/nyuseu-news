@@ -1,5 +1,5 @@
 # coding: utf-8
-"""
-    This module allow us to manage our source feeds / folders
-"""
-__version__ = "0.0.1"
+import os
+PROJECT_DIR = os.path.dirname(os.path.realpath(__file__))
+with open(f'{PROJECT_DIR}/VERSION.txt', 'r') as f:
+    __version__ = f.read()

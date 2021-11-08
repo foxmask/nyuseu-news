@@ -1,6 +1,6 @@
 # coding: utf-8
 """
-   Nyuseu - 뉴스 - Server
+   Nyuseu - 뉴스 - News - The Server
 """
 import json
 import logging
@@ -8,35 +8,36 @@ import orm
 import os
 # starlette
 from starlette.applications import Starlette
-from starlette.config import Config
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, FileResponse
 from starlette.routing import Mount, Router, Route
 from starlette.schemas import SchemaGenerator
+from starlette.staticfiles import StaticFiles
+from starlette.templating import Jinja2Templates
+
 import sys
 # uvicorn
 import uvicorn
 import yaml
 
-PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))   # noqa: E402
 PARENT_FOLDER = os.path.dirname(PROJECT_DIR)
 sys.path.append(PARENT_FOLDER)
 
 import nyuseu_server  # noqa: E402
+from nyuseu_server import settings  # noqa: E402
 from nyuseu_server.models import Feeds, Folders, Articles  # noqa: E402
 from nyuseu_server.models import database  # noqa: E402
-from nyuseu_server.opml_load import load  # noqa: E402
+from nyuseu_server.opml_import_export import load, dump  # noqa: E402
+
+templates = Jinja2Templates(directory="templates")
+statics = StaticFiles(directory="static")
 
 logger = logging.getLogger(__name__)
 
-# load configuration
-settings = Config('.env')
-
-schemas = SchemaGenerator(
-    {"openapi": "3.0.0", "info": {"title": "Nyuseu Server API", "version": "1.0"}}
-)
-
 main_app = Starlette()
-main_app.debug = settings('NYUSEU_SERVER_DEBUG', default=False)
+main_app.debug = settings.NYUSEU_SERVER_DEBUG
+
+# API
 
 
 # FOLDERS
@@ -97,17 +98,17 @@ async def get_feeds_by_folder(request):
     data = await Feeds.objects.filter(folder__id=folder_id).all()
     content = [
         {
-            "id": result["id"],
-            "title": result["title"],
-            "url": result["url"],
+            "id": result.id,
+            "title": result.title,
+            "url": result.url,
             "folder": {'id': result.folder.id,
                        'title': result.folder.title,
                        'date_created': str(result.folder.date_created),
                        'date_modified': str(result.folder.date_modified)
                        },
-            "date_created": str(result["date_created"]),
-            "date_modified": str(result["date_modified"]),
-            "status": result["status"],
+            "date_created": str(result.date_created),
+            "date_modified": str(result.date_modified),
+            "status": result.status,
         }
         for result in data
     ]
@@ -174,22 +175,22 @@ async def get_folders(request):
         data_feed = await Feeds.objects.filter(folder__id=result['id']).all()
         content_feed = [
             {
-                "id": result_feed["id"],
-                "title": result_feed["title"],
-                "url": result_feed["url"],
-                "date_created": str(result_feed["date_created"]),
-                "date_modified": str(result_feed["date_modified"]),
-                "status": result_feed["status"],
+                "id": result_feed.id,
+                "title": result_feed.title,
+                "url": result_feed.url,
+                "date_created": str(result_feed.date_created),
+                "date_modified": str(result_feed.date_modified),
+                "status": result_feed.status,
             }
             for result_feed in data_feed
         ]
 
         content.append({
-            "id": result["id"],
-            "title": result["title"],
-            "date_created": result["date_created"],
-            "date_modified": result["date_modified"],
-            "unread": result["unread"],
+            "id": result.id,
+            "title": result.title,
+            "date_created": result.date_created,
+            "date_modified": result.date_modified,
+            "unread": result.unread,
             "feeds": content_feed
         })
 
@@ -315,17 +316,17 @@ async def get_feeds(request):
     data = await Feeds.objects.select_related("folder").all()
     content = [
         {
-            "id": result["id"],
-            "title": result["title"],
-            "url": result["url"],
+            "id": result.id,
+            "title": result.title,
+            "url": result.url,
             "folder": {'id': result.folder.id,
                        'title': result.folder.title,
                        'date_created': str(result.folder.date_created),
                        'date_modified': str(result.folder.date_modified)
                        },
-            "date_created": str(result["date_created"]),
-            "date_modified": str(result["date_modified"]),
-            "status": result["status"],
+            "date_created": str(result.date_created),
+            "date_modified": str(result.date_modified),
+            "status": result.status,
         }
         for result in data
     ]
@@ -460,10 +461,10 @@ async def get_art(request):
                  'date_modified': str(folder.date_modified)
                  }
     content = {
-        "id": result["id"],
-        "title": result["title"],
-        "text": result["text"],
-        "image": result["image"],
+        "id": result.id,
+        "title": result.title,
+        "text": result.text,
+        "image": result.image,
         "feeds": {'id': result.feeds.id,
                   'title': result.feeds.title,
                   'url': result.feeds.url,
@@ -473,10 +474,10 @@ async def get_art(request):
                   'date_grabbed': str(result.feeds.date_grabbed),
                   'status': result.feeds.status,
                   },
-        "date_created": str(result["date_created"]),
-        "source_url": result["source_url"],
-        "read": result["read"],
-        "read_later": result["read_later"],
+        "date_created": str(result.date_created),
+        "source_url": result.source_url,
+        "read": result.read,
+        "read_later": result.read_later,
     }
 
     logger.debug(f"get an article {result}")
@@ -523,10 +524,10 @@ async def get_arts(request):
                      }
         content.append(
             {
-                "id": result["id"],
-                "title": result["title"],
-                "text": result["text"],
-                "image": result["image"],
+                "id": result.id,
+                "title": result.title,
+                "text": result.text,
+                "image": result.image,
                 "feeds": {'id': result.feeds.id,
                           'title': result.feeds.title,
                           'url': result.feeds.url,
@@ -536,10 +537,10 @@ async def get_arts(request):
                           'date_grabbed': str(result.feeds.date_grabbed),
                           'status': result.feeds.status,
                           },
-                "date_created": str(result["date_created"]),
-                "source_url": result["source_url"],
-                "read": result["read"],
-                "read_later": result["read_later"],
+                "date_created": str(result.date_created),
+                "source_url": result.source_url,
+                "read": result.read,
+                "read_later": result.read_later,
             }
         )
     logger.debug("get all articles")
@@ -587,10 +588,10 @@ async def get_arts_by_feed(request):
                      }
         content.append(
             {
-                "id": result["id"],
-                "title": result["title"],
-                "text": result["text"],
-                "image": result["image"],
+                "id": result.id,
+                "title": result.title,
+                "text": result.text,
+                "image": result.image,
                 "feeds": {'id': result.feeds.id,
                           'title': result.feeds.title,
                           'url': result.feeds.url,
@@ -600,10 +601,10 @@ async def get_arts_by_feed(request):
                           'date_grabbed': str(result.feeds.date_grabbed),
                           'status': result.feeds.status,
                           },
-                "date_created": str(result["date_created"]),
-                "source_url": result["source_url"],
-                "read": result["read"],
-                "read_later": result["read_later"],
+                "date_created": str(result.date_created),
+                "source_url": result.source_url,
+                "read": result.read,
+                "read_later": result.read_later,
             }
         )
     logger.debug(f"get all articles for that feed {feeds_id}")
@@ -670,7 +671,7 @@ async def unread_later(request):
     return JSONResponse(res.json())
 
 
-async def opml(request):
+async def opml_import(request):
     """
     responses:
       200:
@@ -681,6 +682,23 @@ async def opml(request):
     opml_resource = request.path_params['opml']
     if opml_resource.endswith('.opml'):
         res = await load(opml_resource)
+    else:
+        res = json.dumps({'status': 'the file is not an OPML file'})
+    logger.debug(res.json())
+    return JSONResponse(res.json())
+
+
+async def opml_export(request):
+    """
+    responses:
+      200:
+        description: import an OPML file
+        examples:
+          [{"opml": "http://url/to/opml or /local/path/to/opml/file"}]
+    """
+    opml_resource = request.path_params['opml']
+    if opml_resource.endswith('.opml'):
+        res = await dump(opml_resource)
     else:
         res = json.dumps({'status': 'the file is not an OPML file'})
     logger.debug(res.json())
@@ -699,12 +717,43 @@ async def server_check(request):
     logger.debug(version)
     return JSONResponse(version)
 
+schemas = SchemaGenerator(
+    {"openapi": "3.0.0",
+     "info": {"title": "Nyuseu - 뉴스 - News - The Server",
+              "version": nyuseu_server.__version__}
+     }
+)
+
 
 def openapi_schema(request):
     """
-
+        display the API schema
     """
     return schemas.OpenAPIResponse(request=request)
+
+
+# web page
+async def homepage(request):
+
+    return templates.TemplateResponse("index.html", {'request': request})
+
+
+async def favicon(request):
+    """
+    favicon
+    :param request:
+    :return:
+    """
+    return FileResponse('static/favicon.ico')
+
+vue = Starlette(
+    debug=True,
+    routes=[
+        Route('/', homepage, methods=['GET'], name='homepage'),
+        # Route('/favicon.ico', favicon, methods=['GET']),
+        Mount('/static', StaticFiles(directory="static")),
+    ],
+)
 
 
 # The API Routes
@@ -737,26 +786,24 @@ app = Router(routes=[
         Mount('/version', app=Router([
             Route('/', endpoint=server_check, methods=['GET']),
         ])),
-        Mount('/import', app=Router([
-            Route('/opml', endpoint=opml, methods=['POST']),
+        Mount('/opml', app=Router([
+            Route('/import', endpoint=opml_import, methods=['POST']),
+            Route('/export', endpoint=opml_export, methods=['GET']),
         ])),
         Route("/schema", endpoint=openapi_schema, include_in_schema=False)
     ]))
 ])
 
 # let's mount each Route
+main_app.mount('/', app=vue)
 main_app.mount('/api', app=app)
 
 # Bootstrap
 if __name__ == '__main__':
-    print('Nyuseu Server - 뉴스 - Feeds Reader Server - Starlette powered')
+    print('Nyuseu - 뉴스 - News - The Server - Feeds Reader Server - Starlette powered')
 
     if sys.argv[-1] == "schema":
         schema = schemas.get_schema(routes=app.routes)
         print(yaml.dump(schema, default_flow_style=False))
     else:
-        uvicorn.run(main_app,
-                    host=settings('NYUSEU_SERVER_HOST', default='127.0.0.1'),
-                    port=settings('NYUSEU_SERVER_PORT',
-                                  cast=int,
-                                  default=8001))
+        uvicorn.run(main_app, host=settings.NYUSEU_SERVER_HOST, port=settings.NYUSEU_SERVER_PORT,)

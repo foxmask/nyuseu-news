@@ -7,32 +7,31 @@ from __future__ import unicode_literals
 import arrow
 from bs4 import BeautifulSoup
 import feedparser
+from feedparser_data import RssAsync as Rss  # noqa: E402
 import datetime
 import logging.config
 import os
 from rich.console import Console
-from starlette.config import Config
 import sys
 import time
 
-PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))  # noqa: E402
 PARENT_FOLDER = os.path.dirname(PROJECT_DIR)
 sys.path.append(PARENT_FOLDER)
 
+from nyuseu_server import settings  # noqa: E402
 from nyuseu_server.models import Feeds, Articles  # noqa: E402
-from feedparser_data import RssAsync as Rss  # noqa: E402
 
 logging.config.fileConfig('logging.conf')
 logger = logging.getLogger(__name__)
 
-config = Config('.env')
 console = Console()
 
 __author__ = 'FoxMaSk'
 __all__ = ['go']
 
 
-def get_published(entry) -> datetime:
+def _get_published(entry) -> datetime:
     """
     get the 'published' attribute
     :param entry:
@@ -71,7 +70,7 @@ def _get_content(data, which_content):
     return content
 
 
-def revamped_images(content):
+def _revamped_images(content):
     """
 
     """
@@ -91,7 +90,7 @@ def revamped_images(content):
     return content
 
 
-def set_content(entry):
+def _set_content(entry):
     """
     which content to return ?
     :param entry:
@@ -106,8 +105,8 @@ def set_content(entry):
         if entry.get('description'):
             content = entry.get('description')
 
-    image = get_image(entry, content)
-    content = revamped_images(content)
+    image = _get_image(entry, content)
+    content = _revamped_images(content)
     return content, image
 
 
@@ -143,7 +142,7 @@ def from_content(content):
     return new_image
 
 
-def get_image(entry, content):
+def _get_image(entry, content):
     """
 
     """
@@ -160,14 +159,18 @@ async def go():
     """
     console.print('Nyuseu Server Engine - 뉴스 - Feeds Reader Server - in progress', style="green")
     feeds = await Feeds.objects.all()
+    ttl_read = 0
+    ttl_created = 0
+    ttl_flux = 0
     for my_feeds in feeds:
         rss = Rss()
         console.print(f"Feeds {my_feeds.url}", style="magenta")
-        feeds = await rss.get_data(**{'url_to_parse': my_feeds.url, 'bypass_bozo': config('BYPASS_BOZO')})
-        now = arrow.utcnow().to(config('TIME_ZONE')).format('YYYY-MM-DDTHH:mm:ssZZ')
+        feeds = await rss.get_data(**{'url_to_parse': my_feeds.url, 'bypass_bozo': settings.BYPASS_BOZO})
+        now = arrow.utcnow().to(settings.TIME_ZONE).format('YYYY-MM-DDTHH:mm:ssZZ')
         date_grabbed = arrow.get(my_feeds.date_grabbed).format('YYYY-MM-DDTHH:mm:ssZZ')
         read_entries = 0
         created_entries = 0
+        ttl_flux += 1
         if 'entries' in feeds:
             for entry in feeds['entries']:
                 # it may happened that feeds does not provide title ... yes !
@@ -176,12 +179,12 @@ async def go():
                 read_entries += 1
                 # entry.*_parsed may be None when the date in a RSS Feed is invalid
                 # so will have the "now" date as default
-                published = get_published(entry)
+                published = _get_published(entry)
                 if published:
-                    published = arrow.get(published).to(config('TIME_ZONE')).format('YYYY-MM-DDTHH:mm:ssZZ')
+                    published = arrow.get(published).to(settings.TIME_ZONE).format('YYYY-MM-DDTHH:mm:ssZZ')
                 # last triggered execution
                 if published is not None and now >= published >= date_grabbed:
-                    content, image = set_content(entry)
+                    content, image = _set_content(entry)
                     # add an article
                     res = await Articles.objects.create(title=entry.title,
                                                         text=str(content),
@@ -190,7 +193,7 @@ async def go():
                                                         source_url=entry.link)
                     if res:
                         created_entries += 1
-                        now = arrow.utcnow().to(config('TIME_ZONE')).format('YYYY-MM-DD HH:mm:ssZZ')
+                        now = arrow.utcnow().to(settings.TIME_ZONE).format('YYYY-MM-DD HH:mm:ssZZ')
                         source_feeds = await Feeds.objects.get(id=my_feeds.id)
                         await source_feeds.update(date_grabbed=now)
                         console.print(f'Feeds {my_feeds.title} : {entry.title}', style="blue")
@@ -200,6 +203,11 @@ async def go():
                               f'/ Read {read_entries}', style="magenta")
             else:
                 console.print(f'{my_feeds.title}: no feeds read', style="blue")
+
+            ttl_read += read_entries
+            ttl_created += created_entries
+            console.print(f'Total: Flux {ttl_flux} Entries created {ttl_read} '
+                          f'/ Read {ttl_created}', style="magenta")
 
     console.print('Nyuseu Server Engine - 뉴스 - Feeds Reader Server - Finished!', style="green")
 
