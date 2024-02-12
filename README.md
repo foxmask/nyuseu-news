@@ -1,6 +1,6 @@
 # Nyuseu Server
 
-![Nyuseu](https://gitlab.com/annyong/nyuseu-news/-/raw/master/home.png)
+![Nyuseu](https://github.com/foxmask/nyuseu-news/blob/master/home.png)
 
 ## Prerequisites
 
@@ -19,7 +19,7 @@ Starlette
 python3 -m venv nyuseu-news
 cd nyuseu-news
 source bin/activate
-git clone https://gitlab.com/annyong/nyuseu-news.git
+git clone https://github.com/foxmask/nyuseu-news.git
 cd nyuseu-news
 cd nyuseu_server
 ```
@@ -114,4 +114,4 @@ python engine.py
 
 ## :package: Installation 'FRONT'
 
-![Nyuseu Vue](https://gitlab.com/annyong/nyuseu-news/-/blob/master/nyuseu-vue/README.md)
+![Nyuseu Vue](https://github.com/foxmask/nyuseu-news/master/nyuseu-vue/README.md)

@@ -19,7 +19,7 @@ __all__ = ['RssAsync']
 
 class RssAsync:
 
-    USER_AGENT = f'FeedParserData/{nyuseu_server.__version__} +https://framagit.org/annyong/nyuseu_news'
+    USER_AGENT = f'FeedParserData/{nyuseu_server.__version__} +https://github.com/foxmask/nyuseu-news'
 
     async def get_data(self, url_to_parse, bypass_bozo=False, **kwargs) -> typing.Any:
         """
